@@ -17,6 +17,7 @@ import {
 } from "@/components/ui/card";
 import { useIsMobile } from "@/hooks/useMobile";
 import { useLocale } from "@/config/hooks";
+import { ALL_GROUPS } from "@/hooks/useNodeCommons";
 import { cn } from "@/utils";
 
 interface HomePageProps {
@@ -114,7 +115,7 @@ const HomePage: React.FC<HomePageProps> = ({
               variant={selectedGroup === group ? "secondary" : "ghost"}
               size="sm"
               onClick={() => setSelectedGroup?.(group)}>
-              {group}
+              {group === ALL_GROUPS ? t("group.all") : group}
             </Button>
           ))}
         </div>

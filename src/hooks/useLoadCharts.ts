@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useNodeData } from "@/contexts/NodeDataContext";
 import type { HistoryRecord, NodeData } from "@/types/node";
 import type { RpcNodeStatus } from "@/types/rpc";
@@ -13,6 +13,8 @@ export const useLoadCharts = (node: NodeData | null, hours: number) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [isDataEmpty, setIsDataEmpty] = useState(false);
+  // 请求序号：只有最后一次发起的请求可以写入状态，避免旧响应覆盖新响应
+  const requestIdRef = useRef(0);
 
   const isRealtime = hours === 0;
 
@@ -20,41 +22,55 @@ export const useLoadCharts = (node: NodeData | null, hours: number) => {
   useEffect(() => {
     if (isRealtime || !node?.uuid) return;
 
+    const requestId = ++requestIdRef.current;
+
     const fetchHistoricalData = async () => {
       setLoading(true);
       setError(null);
       try {
         const data = await getLoadHistory(node.uuid, hours);
+        if (requestId !== requestIdRef.current) return;
         const records = data?.records || [];
         setHistoricalData(records);
         setIsDataEmpty(records.length === 0);
 
         setRealtimeData([]); // Clear realtime data
       } catch (err: any) {
+        if (requestId !== requestIdRef.current) return;
         setError(err.message || "Failed to fetch historical data");
       } finally {
-        setLoading(false);
+        if (requestId === requestIdRef.current) {
+          setLoading(false);
+        }
       }
     };
 
     fetchHistoricalData();
-  }, [node?.uuid, hours, getLoadHistory, isRealtime, isDataEmpty]);
+    // 注意：不要把 isDataEmpty 放进依赖数组 —— 它由本 effect 自己写入，
+    // 会导致空结果时反复重新请求。
+  }, [node?.uuid, hours, getLoadHistory, isRealtime]);
 
   // Fetch initial real-time data and handle WebSocket updates
   useEffect(() => {
     if (!isRealtime || !node?.uuid) return;
+
+    const requestId = ++requestIdRef.current;
 
     const fetchInitialRealtimeData = async () => {
       setLoading(true);
       setError(null);
       try {
         const data = await getRecentLoadHistory(node.uuid);
+        if (requestId !== requestIdRef.current) return;
         setRealtimeData(data?.records || []);
         setHistoricalData([]); // Clear historical data
       } catch (err: any) {
+        if (requestId !== requestIdRef.current) return;
         setError(err.message || "Failed to fetch initial real-time data");
       } finally {
-        setLoading(false);
+        if (requestId === requestIdRef.current) {
+          setLoading(false);
+        }
       }
     };
 

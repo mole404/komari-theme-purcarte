@@ -22,6 +22,7 @@ import Loading from "./components/loading";
 import type { StatsBarProps } from "./components/sections/StatsBar";
 import { useNodeListCommons } from "@/hooks/useNodeCommons";
 import SettingsPanel from "./components/settings/SettingsPanel";
+import ErrorBoundary from "./components/ErrorBoundary";
 import { useIsMobile } from "./hooks/useMobile";
 import type { SiteStatus } from "./config/default";
 import { Toaster } from "@/components/ui/sonner";
@@ -350,10 +351,12 @@ const App = () => {
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    <ConfigProvider>
-      <Router>
-        <App />
-      </Router>
-    </ConfigProvider>
+    <ErrorBoundary>
+      <ConfigProvider>
+        <Router>
+          <App />
+        </Router>
+      </ConfigProvider>
+    </ErrorBoundary>
   </StrictMode>
 );

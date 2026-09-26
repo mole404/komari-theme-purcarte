@@ -134,9 +134,12 @@ const Instance = memo(({ node }: InstanceProps) => {
           label={t("instancePage.load")}
           value={
             stats && isOnline
-              ? `${stats.load.toFixed(2)} | ${stats.load5.toFixed(
-                  2
-                )} | ${stats.load15.toFixed(2)}`
+              ? [stats.load, stats.load5, stats.load15]
+                  .map((loadValue) => {
+                    const num = Number(loadValue);
+                    return Number.isFinite(num) ? num.toFixed(2) : "—";
+                  })
+                  .join(" | ")
               : t("node.notAvailable")
           }
         />

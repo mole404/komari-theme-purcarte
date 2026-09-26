@@ -104,7 +104,8 @@ const ThemeMenuItems = ({
 const ViewModeSwitcher = ({ isMobile }: { isMobile?: boolean }) => {
   const { viewMode, setViewMode } = useTheme();
   const { t } = useLocale();
-  const Icon = ViewModeIcons[viewMode];
+  // 兑底到 grid：配置或本地存储里出现未知视图时，不能渲染 undefined 图标（会整站白屏）
+  const Icon = ViewModeIcons[viewMode] ?? ViewModeIcons.grid;
 
   if (isMobile) {
     return (
@@ -139,7 +140,8 @@ const ViewModeSwitcher = ({ isMobile }: { isMobile?: boolean }) => {
 const ThemeSwitcher = ({ isMobile }: { isMobile?: boolean }) => {
   const { rawAppearance, setAppearance } = useTheme();
   const { t } = useLocale();
-  const Icon = ThemeIcons[rawAppearance];
+  // 兑底到 system：未知外观值同样不能让 Icon 变成 undefined
+  const Icon = ThemeIcons[rawAppearance] ?? ThemeIcons.system;
 
   if (isMobile) {
     return (

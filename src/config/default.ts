@@ -160,6 +160,7 @@ export type AppearanceType = "light" | "dark" | "system";
 export const allAppearance: AppearanceType[] = ["light", "dark", "system"];
 
 export type ViewModeType = "grid" | "table" | "compact";
+export const allViewModes: ViewModeType[] = ["grid", "table", "compact"];
 
 export type SiteStatus =
   | "public"

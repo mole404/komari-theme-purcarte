@@ -61,7 +61,9 @@ export function ConfigProvider({ children }: ConfigProviderProps) {
             ) {
               apiService.useRpc = true;
               getWsService().useRpc = true;
-              console.log("RPC has been enabled for API and WebSocket.");
+              if (import.meta.env.DEV) {
+                console.log("RPC has been enabled for API and WebSocket.");
+              }
             }
           }
         }
@@ -117,7 +119,8 @@ export function ConfigProvider({ children }: ConfigProviderProps) {
     <ConfigContext.Provider
       value={{
         ...activeConfig,
-        titleText: config?.titleText || DEFAULT_CONFIG.titleText,
+        // 优先使用 activeConfig（含预览配置），否则预览标题会被 config 覆盖掉
+        titleText: activeConfig.titleText || DEFAULT_CONFIG.titleText,
         publicSettings,
         siteStatus,
         texts,

@@ -108,7 +108,7 @@
   - **默认值:** `(空)`
   - **说明:** 移动端视频背景链接，与桌面端一样区分亮暗模式，留空则使用桌面端视频
 
-- **背景对齐方式** (`backagroundAlignment`)
+- **背景对齐方式** (`backgroundAlignment`)
   - **类型:** `string`
   - **默认值:** `cover,top`
   - **说明:** 调整背景图片和视频的对齐方式，使用“,”分隔背景大小和位置两个属性，背景大小可选 cover（覆盖）,contain（包含）,fill（填充）；背景位置可选 center（居中）,top（顶部）,bottom（底部）,left（左侧）,right（右侧），eg: cover,top

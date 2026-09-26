@@ -38,7 +38,7 @@ const osConfigs: OSConfig[] = [
   },
   {
     name: "Astra Linux",
-    image: "/assets/logo/os-astra.svg",
+    image: "/assets/logo/os-astra.png",
     keywords: ["astra", "astra linux"],
   },
   {

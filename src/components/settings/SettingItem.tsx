@@ -9,6 +9,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { ConfigOptions } from "@/config/default";
+import { parseBoolean } from "@/utils/parseBoolean";
 
 interface SettingItemProps {
   item: any;
@@ -24,7 +25,13 @@ const SettingItem = ({
   const defaultValue = item.default;
   const currentValue =
     editingConfig[item.key as keyof ConfigOptions] ?? defaultValue;
-  const isModified = currentValue !== defaultValue;
+  // switch 项的值可能是 "true" / "1" 这类字符串：用与开关显示（parseBoolean）一致的口径比较，
+  // 否则没改动过的项也会被标成已修改（* 号）。
+  const defaultSwitchValue = parseBoolean(defaultValue, false);
+  const isModified =
+    item.type === "switch"
+      ? parseBoolean(currentValue, defaultSwitchValue) !== defaultSwitchValue
+      : currentValue !== defaultValue;
   const [localValue, setLocalValue] = useState(currentValue);
 
   useEffect(() => {
@@ -64,7 +71,9 @@ const SettingItem = ({
       case "switch":
         return (
           <Switch
-            checked={localValue as boolean}
+            // 配置/导入数据里的开关可能是 "false" 这类字符串，
+            // Radix 的 checked 只看真值，直接传字符串 "false" 会显示成“开”
+            checked={parseBoolean(localValue, parseBoolean(defaultValue, false))}
             onCheckedChange={(checked) => {
               setLocalValue(checked);
               onConfigChange(item.key, checked);

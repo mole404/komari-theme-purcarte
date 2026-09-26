@@ -1,8 +1,14 @@
-import { useState, useEffect, createContext, useContext } from "react";
+import { useState, useEffect, useRef, createContext, useContext } from "react";
 import { useIsMobile } from "@/hooks/useMobile";
 import { useAppConfig } from "@/config";
-import { DEFAULT_CONFIG, allAppearance } from "@/config/default";
+import {
+  DEFAULT_CONFIG,
+  allAppearance,
+  allColors,
+  allViewModes,
+} from "@/config/default";
 import type { AppearanceType, ColorType, ViewModeType } from "@/config/default";
+import { parseBoolean } from "@/utils/parseBoolean";
 
 type themeAppearanceType = "light" | "dark";
 const defaultThemeAppearance: themeAppearanceType = "light";
@@ -133,6 +139,7 @@ export const useThemeManager = () => {
     selectThemeColor,
     selectedDefaultView,
     selectMobileDefaultView,
+    enableLocalStorage,
   } = useAppConfig();
   const defaultstatusCardsVisibility = useAppConfig().statusCardsVisibility;
   const isMobile = useIsMobile();
@@ -145,22 +152,62 @@ export const useThemeManager = () => {
 
   const [color, setColor] = useStoredState<ColorType>(
     "color",
-    selectThemeColor
+    selectThemeColor,
+    (v): v is ColorType => allColors.includes(v)
   );
 
   const [viewMode, setViewMode] = useStoredState<ViewModeType>(
     "nodeViewMode",
-    selectedDefaultView
+    selectedDefaultView,
+    (v): v is ViewModeType => allViewModes.includes(v)
   );
 
+  // 上一次从后台拿到的默认值（null 表示还没同步过，即首次挂载）
+  const prevDesktopDefaultView = useRef<ViewModeType | null>(null);
+  const prevMobileDefaultView = useRef<ViewModeType | null>(null);
+  const prevThemeColor = useRef<ColorType | null>(null);
+
   useEffect(() => {
-    if (selectMobileDefaultView && isMobile) {
-      setViewMode(selectMobileDefaultView);
-    }
-    if (!isMobile) {
+    // 判断“后台默认值是否真的发生了变化”，并顺手更新快照。
+    // 首次挂载（快照为 null）时默认不同步，避免把用户在本地保存的选择覆盖掉。
+    const isFirstRun =
+      prevDesktopDefaultView.current === null &&
+      prevMobileDefaultView.current === null;
+    const desktopDefaultChanged =
+      prevDesktopDefaultView.current !== null &&
+      prevDesktopDefaultView.current !== selectedDefaultView;
+    const mobileDefaultChanged =
+      prevMobileDefaultView.current !== null &&
+      prevMobileDefaultView.current !== selectMobileDefaultView;
+
+    prevDesktopDefaultView.current = selectedDefaultView;
+    prevMobileDefaultView.current = selectMobileDefaultView;
+
+    // enableLocalStorage 为 false 时，用户的本地选择无处存放，保持原有的
+    // “配置强制生效”语义：允许首次挂载就把视图同步成配置里的默认值。
+    // 开启本地存储时则只在后台默认值真的变化后才同步。
+    const configForcesValue = !enableLocalStorage;
+    const shouldSyncDesktop =
+      desktopDefaultChanged || (isFirstRun && configForcesValue);
+    const shouldSyncMobile =
+      mobileDefaultChanged || (isFirstRun && configForcesValue);
+
+    // 只同步当前设备对应的默认值；不再因为 isMobile 跨 768px 断点变化而重置用户视图
+    // （配置没变时本函数会提前 return，即仅窗口尺寸变化不会产生任何 setViewMode）。
+    if (isMobile) {
+      if (shouldSyncMobile) {
+        setViewMode(selectMobileDefaultView || selectedDefaultView);
+      }
+    } else if (shouldSyncDesktop) {
       setViewMode(selectedDefaultView);
     }
-  }, [isMobile, selectMobileDefaultView, selectedDefaultView, setViewMode]);
+  }, [
+    isMobile,
+    selectMobileDefaultView,
+    selectedDefaultView,
+    enableLocalStorage,
+    setViewMode,
+  ]);
 
   const [statusCardsVisibility, setStatusCardsVisibility] = useStoredState(
     "statusCardsVisibility",
@@ -168,7 +215,7 @@ export const useThemeManager = () => {
       const visibility: { [key: string]: boolean } = {};
       defaultstatusCardsVisibility.split(",").forEach((item) => {
         const [key, value] = item.split(":");
-        visibility[key] = value === "true";
+        visibility[key] = parseBoolean(value, false);
       });
       return visibility as ThemeContextType["statusCardsVisibility"];
     })()
@@ -181,8 +228,24 @@ export const useThemeManager = () => {
   };
 
   useEffect(() => {
+    // 与视图模式同一套规则：首次挂载不覆盖用户本地保存的颜色，
+    // 之后只在后台默认颜色发生变化时同步；配置强制生效（未启用本地存储）时允许首次同步。
+    const isFirstRun = prevThemeColor.current === null;
+    const colorChanged =
+      prevThemeColor.current !== null &&
+      prevThemeColor.current !== selectThemeColor;
+
+    prevThemeColor.current = selectThemeColor;
+
+    if (isFirstRun && enableLocalStorage) {
+      return;
+    }
+    if (!isFirstRun && !colorChanged) {
+      return;
+    }
+
     setColor(selectThemeColor);
-  }, [selectThemeColor, setColor]);
+  }, [selectThemeColor, enableLocalStorage, setColor]);
 
   const resolvedAppearance = useSystemTheme(appearance);
 

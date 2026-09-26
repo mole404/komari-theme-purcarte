@@ -2,6 +2,7 @@ import { type ReactNode, useCallback, useMemo, useEffect } from "react";
 import { useAppConfig } from "@/config/hooks";
 import { useIsMobile } from "@/hooks/useMobile";
 import { useTheme } from "@/hooks/useTheme";
+import { parseBoolean } from "@/utils/parseBoolean";
 
 export function DynamicContent({ children }: { children: ReactNode }) {
   const config = useAppConfig();
@@ -44,23 +45,7 @@ export function DynamicContent({ children }: { children: ReactNode }) {
         ? Number(blurValue)
         : 10;
     const width = Math.min(100, Math.max(1, Number(mainWidth) || 85));
-    const isBlurOff =
-      (enableBlur as unknown) === false ||
-      (enableBlur as unknown) === 0 ||
-      (typeof enableBlur === "string" &&
-        [
-          "false",
-          "0",
-          "off",
-          "no",
-          "none",
-          "disable",
-          "disabled",
-          "关闭",
-          "否",
-          "不",
-          "假",
-        ].indexOf((enableBlur as string).trim().toLowerCase()) >= 0);
+    const isBlurOff = !parseBoolean(enableBlur, true);
     const styles: string[] = [];
 
     styles.push(`--main-width: ${width}vw;`);

@@ -11,6 +11,22 @@ import { useLocale, useAppConfig } from "@/config/hooks";
 type SortKey = "trafficUp" | "trafficDown" | "speedUp" | "speedDown" | null;
 type SortOrder = "asc" | "desc";
 
+/**
+ * “全部分组”的哨兵值。
+ * 以前直接用本地化文案 t("group.all") 当哨兵，管理员一改文案节点就会被过滤成空，
+ * 现在用与文案无关的常量，展示时再翻译。
+ */
+export const ALL_GROUPS = "__all__";
+
+/**
+ * 安全地把后端数值字段转成有限数值：字段缺失（null / undefined / 非数字）时回退为 0。
+ * 否则 NaN 会一路传到下游的 toFixed()（节点卡/表格的百分比、流量进度条）直接抛错。
+ */
+const toFiniteNumber = (value: unknown): number => {
+  const num = Number(value);
+  return Number.isFinite(num) ? num : 0;
+};
+
 export const useNodeListCommons = (searchTerm: string) => {
   const {
     nodes: staticNodes,
@@ -18,10 +34,9 @@ export const useNodeListCommons = (searchTerm: string) => {
     getGroups,
   } = useNodeData() as NodeDataContextType;
   const { liveData } = useLiveData() as LiveDataContextType;
-  const { t } = useLocale();
   const { isOfflineNodesBehind, defaultSelectedGroup } = useAppConfig();
   const [selectedGroup, setSelectedGroup] = useState(
-    defaultSelectedGroup || t("group.all")
+    defaultSelectedGroup || ALL_GROUPS
   );
   const [sortKey, setSortKey] = useState<SortKey>(null);
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
@@ -47,15 +62,15 @@ export const useNodeListCommons = (searchTerm: string) => {
   }, [staticNodes, liveData]);
 
   const groups = useMemo(
-    () => [t("group.all"), ...getGroups()],
-    [getGroups, t]
+    () => [ALL_GROUPS, ...getGroups()],
+    [getGroups]
   );
 
   const filteredNodes = useMemo(() => {
     let nodes = combinedNodes
       .filter(
         (node: NodeData & { stats?: any }) =>
-          selectedGroup === t("group.all") || node.group === selectedGroup
+          selectedGroup === ALL_GROUPS || node.group === selectedGroup
       )
       .filter((node: NodeData) =>
         node.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -101,7 +116,6 @@ export const useNodeListCommons = (searchTerm: string) => {
     searchTerm,
     sortKey,
     sortOrder,
-    t,
     isOfflineNodesBehind,
   ]);
 
@@ -148,25 +162,28 @@ export const useNodeCommons = (node: NodeData & { stats?: any }) => {
   const isOnline = stats ? stats.online : false;
   const price = formatPrice(node.price, node.currency, node.billing_cycle);
 
-  const cpuUsage = stats && isOnline ? stats.cpu : 0;
+  const cpuUsage = stats && isOnline ? toFiniteNumber(stats.cpu) : 0;
   const memUsage =
     stats && isOnline && node.mem_total > 0
-      ? (stats.ram / node.mem_total) * 100
+      ? (toFiniteNumber(stats.ram) / node.mem_total) * 100
       : 0;
   const swapUsage =
     stats && isOnline && node.swap_total > 0
-      ? (stats.swap / node.swap_total) * 100
+      ? (toFiniteNumber(stats.swap) / node.swap_total) * 100
       : 0;
   const diskUsage =
     stats && isOnline && node.disk_total > 0
-      ? (stats.disk / node.disk_total) * 100
+      ? (toFiniteNumber(stats.disk) / node.disk_total) * 100
       : 0;
 
   const load =
     stats && isOnline
-      ? `${stats.load.toFixed(2)} | ${stats.load5.toFixed(
-          2
-        )} | ${stats.load15.toFixed(2)}`
+      ? [stats.load, stats.load5, stats.load15]
+          .map((value) => {
+            const num = Number(value);
+            return Number.isFinite(num) ? num.toFixed(2) : "—";
+          })
+          .join(" | ")
       : t("node.notAvailable");
 
   const daysLeft =
@@ -223,19 +240,27 @@ export const useNodeCommons = (node: NodeData & { stats?: any }) => {
     let usedTraffic = 0;
     switch (node.traffic_limit_type) {
       case "up":
-        usedTraffic = stats.net_total_up;
+        usedTraffic = toFiniteNumber(stats.net_total_up);
         break;
       case "down":
-        usedTraffic = stats.net_total_down;
+        usedTraffic = toFiniteNumber(stats.net_total_down);
         break;
       case "sum":
-        usedTraffic = stats.net_total_up + stats.net_total_down;
+        usedTraffic =
+          toFiniteNumber(stats.net_total_up) +
+          toFiniteNumber(stats.net_total_down);
         break;
       case "min":
-        usedTraffic = Math.min(stats.net_total_up, stats.net_total_down);
+        usedTraffic = Math.min(
+          toFiniteNumber(stats.net_total_up),
+          toFiniteNumber(stats.net_total_down)
+        );
         break;
       default: // max 或者未设置
-        usedTraffic = Math.max(stats.net_total_up, stats.net_total_down);
+        usedTraffic = Math.max(
+          toFiniteNumber(stats.net_total_up),
+          toFiniteNumber(stats.net_total_down)
+        );
         break;
     }
 

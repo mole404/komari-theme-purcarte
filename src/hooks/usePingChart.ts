@@ -2,7 +2,18 @@ import { useState, useEffect } from "react";
 import { useNodeData } from "@/contexts/NodeDataContext";
 import type { PingHistoryResponse, NodeData } from "@/types/node";
 
-const cache = new Map<string, PingHistoryResponse>();
+const cache = new Map<
+  string,
+  { data: PingHistoryResponse; timestamp: number }
+>();
+
+/** 缓存有效期：60 秒 */
+const CACHE_TTL = 60_000;
+
+/** 手动清空 Ping 历史缓存（如数据明显过期时可由调用方触发） */
+export const clearPingHistoryCache = () => {
+  cache.clear();
+};
 
 export const usePingChart = (node: NodeData | null, hours: number) => {
   const { getPingHistory } = useNodeData();
@@ -21,10 +32,15 @@ export const usePingChart = (node: NodeData | null, hours: number) => {
 
     const cacheKey = `${node.uuid}-${hours}`;
 
-    if (cache.has(cacheKey)) {
-      setPingHistory(cache.get(cacheKey)!);
+    const cached = cache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+      setPingHistory(cached.data);
       setLoading(false);
       return;
+    }
+    if (cached) {
+      // 命中过期缓存：删掉后照常重新请求
+      cache.delete(cacheKey);
     }
 
     setLoading(true);
@@ -34,7 +50,7 @@ export const usePingChart = (node: NodeData | null, hours: number) => {
       try {
         const data = await getPingHistory(node.uuid, hours);
         if (data) {
-          cache.set(cacheKey, data);
+          cache.set(cacheKey, { data, timestamp: Date.now() });
         }
         setPingHistory(data);
       } catch (err: any) {

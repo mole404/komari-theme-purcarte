@@ -192,6 +192,7 @@ export const otherTexts = {
     importSuccess: "导入成功，是否立即保存？",
     importError: "导入配置失败！",
     fetchError: "Failed to fetch theme settings config:",
+    fetchErrorTitle: "获取主题配置失败",
     saveThemeError: "Failed to save theme settings:",
     importConfigError: "Failed to import config:",
     cancel: "撤销",

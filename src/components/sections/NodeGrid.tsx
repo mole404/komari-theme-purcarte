@@ -125,7 +125,9 @@ export const NodeGrid = ({
             <span>{t("node.cpu")}</span>
             <div className="w-3/4 flex items-center gap-2">
               <ProgressBar value={cpuUsage} />
-              <span className="w-12 text-right">{cpuUsage.toFixed(0)}%</span>
+              <span className="w-12 text-right">
+                {Number.isFinite(cpuUsage) ? cpuUsage.toFixed(0) : "0"}%
+              </span>
             </div>
           </div>
           {isShowValueUnderProgressBar && (
@@ -141,7 +143,9 @@ export const NodeGrid = ({
             <span>{t("node.mem")}</span>
             <div className="w-3/4 flex items-center gap-2">
               <ProgressBar value={memUsage} />
-              <span className="w-12 text-right">{memUsage.toFixed(0)}%</span>
+              <span className="w-12 text-right">
+                {Number.isFinite(memUsage) ? memUsage.toFixed(0) : "0"}%
+              </span>
             </div>
           </div>
           {isShowValueUnderProgressBar && (
@@ -165,7 +169,7 @@ export const NodeGrid = ({
                 <ProgressBar value={swapUsage} />
                 {node.swap_total > 0 ? (
                   <span className="w-12 text-right">
-                    {swapUsage.toFixed(0)}%
+                    {Number.isFinite(swapUsage) ? swapUsage.toFixed(0) : "0"}%
                   </span>
                 ) : (
                   <span className="w-12 text-right">{t("node.off")}</span>
@@ -193,7 +197,9 @@ export const NodeGrid = ({
             <span>{t("node.disk")}</span>
             <div className="w-3/4 flex items-center gap-2">
               <ProgressBar value={diskUsage} />
-              <span className="w-12 text-right">{diskUsage.toFixed(0)}%</span>
+              <span className="w-12 text-right">
+                {Number.isFinite(diskUsage) ? diskUsage.toFixed(0) : "0"}%
+              </span>
             </div>
           </div>
           {isShowValueUnderProgressBar && (
@@ -217,7 +223,11 @@ export const NodeGrid = ({
                 <ProgressBar value={trafficPercentage} />
                 <span className="w-12 text-right">
                   {node.traffic_limit !== 0
-                    ? `${trafficPercentage.toFixed(0)}%`
+                    ? `${
+                        Number.isFinite(trafficPercentage)
+                          ? trafficPercentage.toFixed(0)
+                          : "0"
+                      }%`
                     : t("node.off")}
                 </span>
               </div>

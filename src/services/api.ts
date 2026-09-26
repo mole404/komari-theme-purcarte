@@ -114,9 +114,19 @@ class ApiService {
     }
     const response = await this.get<NodeStats[]>(`/api/recent/${uuid}`);
     if (response.status === "success" && Array.isArray(response.data)) {
-      return response.data.map((stats) =>
-        convertNodeStatsToRpcNodeStatus(stats, uuid, true)
-      );
+      const converted: RpcNodeStatus[] = [];
+      for (const stats of response.data) {
+        try {
+          converted.push(convertNodeStatsToRpcNodeStatus(stats, uuid, true));
+        } catch (error) {
+          // 坏数据只跳过该节点，不影响其余节点
+          console.error(
+            `Failed to convert recent stats of node ${uuid}:`,
+            error
+          );
+        }
+      }
+      return converted;
     }
     return [];
   }
@@ -290,11 +300,15 @@ export const apiService = new ApiService();
 export class WebSocketService {
   private ws: WebSocket | null = null;
   private reconnectAttempts = 0;
-  private maxReconnectAttempts = 5;
-  private reconnectInterval = 5000;
+  // 指数退避：1s、2s、4s…上限 30s，不再“5 次之后永久放弃”
+  private baseReconnectDelay = 1000;
+  private maxReconnectDelay = 30000;
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+  private manuallyDisconnected = false;
   private listeners: Set<(data: any) => void> = new Set();
   private url: string;
   private statusInterval: ReturnType<typeof setInterval> | null = null;
+  private visibilityListenerAttached = false;
   private rpcCallId = 1;
   public useRpc = false;
 
@@ -307,6 +321,9 @@ export class WebSocketService {
       return;
     }
 
+    this.manuallyDisconnected = false;
+    this.attachVisibilityListener();
+
     const endpoint = this.useRpc ? "/api/rpc2" : "/api/clients";
     const wsUrl =
       this.url ||
@@ -318,8 +335,12 @@ export class WebSocketService {
       this.ws = new WebSocket(wsUrl);
 
       this.ws.onopen = () => {
-        console.log(`WebSocket connected to ${endpoint}`);
+        if (import.meta.env.DEV) {
+          console.log(`WebSocket connected to ${endpoint}`);
+        }
+        // 连接成功即重置退避计数，之后断线仍从 1s 开始
         this.reconnectAttempts = 0;
+        this.clearReconnectTimer();
         this.sendUpdateRequest();
         this.startStatusUpdates();
       };
@@ -338,14 +359,25 @@ export class WebSocketService {
                 data: { [uuid: string]: NodeStats };
               };
               if (oldData.online && oldData.data) {
+                const onlineList = Array.isArray(oldData.online)
+                  ? oldData.online
+                  : [];
                 const convertedData: RpcNodeStatusMap = {};
                 for (const uuid in oldData.data) {
-                  const isOnline = oldData.online.includes(uuid);
-                  convertedData[uuid] = convertNodeStatsToRpcNodeStatus(
-                    oldData.data[uuid],
-                    uuid,
-                    isOnline
-                  );
+                  // 单个节点的数据坏了只跳过该节点，不让整批数据一起丢
+                  try {
+                    const isOnline = onlineList.includes(uuid);
+                    convertedData[uuid] = convertNodeStatsToRpcNodeStatus(
+                      oldData.data[uuid],
+                      uuid,
+                      isOnline
+                    );
+                  } catch (error) {
+                    console.error(
+                      `Failed to convert stats of node ${uuid}:`,
+                      error
+                    );
+                  }
                 }
                 this.listeners.forEach((listener) => listener(convertedData));
               }
@@ -357,8 +389,14 @@ export class WebSocketService {
       };
 
       this.ws.onclose = () => {
-        console.log("WebSocket disconnected");
+        if (import.meta.env.DEV) {
+          console.log("WebSocket disconnected");
+        }
         this.stopStatusUpdates();
+        // 主动 disconnect() 时不再自动重连，否则会和重连逻辑互相拉扯
+        if (this.manuallyDisconnected) {
+          return;
+        }
         this.reconnect();
       };
 
@@ -371,16 +409,71 @@ export class WebSocketService {
     }
   }
 
+  /**
+   * 断线重连：无限重试 + 指数退避（1s、2s、4s…上限 30s）。
+   * 旧实现固定 5 秒重试 5 次后永久放弃，且没有任何提示。
+   */
   private reconnect() {
-    if (this.reconnectAttempts < this.maxReconnectAttempts) {
-      this.reconnectAttempts++;
-      console.log(
-        `Attempting to reconnect... (${this.reconnectAttempts}/${this.maxReconnectAttempts})`
-      );
-      setTimeout(() => this.connect(), this.reconnectInterval);
-    } else {
-      console.error("Max reconnection attempts reached");
+    if (this.manuallyDisconnected || this.reconnectTimer) {
+      return;
     }
+
+    const delay = Math.min(
+      this.baseReconnectDelay * 2 ** this.reconnectAttempts,
+      this.maxReconnectDelay
+    );
+    this.reconnectAttempts++;
+
+    if (import.meta.env.DEV) {
+      console.log(
+        `Attempting to reconnect in ${delay}ms (attempt ${this.reconnectAttempts})`
+      );
+    }
+
+    this.reconnectTimer = setTimeout(() => {
+      this.reconnectTimer = null;
+      this.connect();
+    }, delay);
+  }
+
+  private clearReconnectTimer() {
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+  }
+
+  /**
+   * 页面从后台切回前台时，如果连接已经断开就立刻重连一次（不等退避计时）。
+   * 浏览器在标签页隐藏时会冻结定时器，靠这一步保证回来后能尽快恢复数据。
+   */
+  private handleVisibilityChange = () => {
+    if (typeof document === "undefined") {
+      return;
+    }
+    if (document.visibilityState !== "visible") {
+      return;
+    }
+    if (this.manuallyDisconnected) {
+      return;
+    }
+
+    const isDisconnected = !this.ws || this.ws.readyState > WebSocket.OPEN;
+    if (!isDisconnected) {
+      return;
+    }
+
+    this.clearReconnectTimer();
+    this.reconnectAttempts = 0;
+    this.connect();
+  };
+
+  private attachVisibilityListener() {
+    if (this.visibilityListenerAttached || typeof document === "undefined") {
+      return;
+    }
+    document.addEventListener("visibilitychange", this.handleVisibilityChange);
+    this.visibilityListenerAttached = true;
   }
 
   private send(data: string) {
@@ -408,10 +501,13 @@ export class WebSocketService {
   }
 
   disconnect() {
+    // 主动断开：清掉退避定时器并标记，避免 onclose 触发自动重连
+    this.manuallyDisconnected = true;
+    this.clearReconnectTimer();
+    this.stopStatusUpdates();
     if (this.ws) {
       this.ws.close();
       this.ws = null;
-      this.stopStatusUpdates();
     }
   }
 

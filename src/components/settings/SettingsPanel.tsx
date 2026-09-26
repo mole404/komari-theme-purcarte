@@ -5,6 +5,7 @@ import type { ConfigOptions } from "@/config/default";
 import { DEFAULT_CONFIG } from "@/config/default";
 import { defaultTexts } from "@/config/locales";
 import { apiService } from "@/services/api";
+import { parseBoolean } from "@/utils/parseBoolean";
 import SettingItem from "./SettingItem";
 import CustomTextsEditor from "./CustomTextsEditor";
 import { Button } from "@/components/ui/button";
@@ -29,25 +30,41 @@ const SettingsPanel = ({ isOpen, onClose }: SettingsPanelProps) => {
   const [isPreviewing, setIsPreviewing] = useState(true);
   const isMobile = useIsMobile();
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [settingsConfigError, setSettingsConfigError] = useState<string | null>(
+    null
+  );
   const toastId = useRef<string | number | null>(null);
 
-  useEffect(() => {
-    const fetchSettingsConfig = async () => {
-      if (publicSettings?.theme) {
-        try {
-          const response = await fetch(
-            `/themes/${publicSettings.theme}/komari-theme.json`
-          );
-          const data = await response.json();
-          setSettingsConfig(data.configuration.data);
-        } catch (error) {
-          console.error(t("setting.fetchError"), error);
-        }
+  const fetchSettingsConfig = useCallback(async () => {
+    if (!publicSettings?.theme) {
+      return;
+    }
+    setSettingsConfigError(null);
+    try {
+      const response = await fetch(
+        `/themes/${publicSettings.theme}/komari-theme.json`
+      );
+      // 之前的实现不检查 response.ok，接口 404/500 时会静默留下空面板
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
-    };
-
-    fetchSettingsConfig();
+      const data = await response.json();
+      const configuration = data?.configuration?.data;
+      if (!Array.isArray(configuration)) {
+        throw new Error("Invalid theme configuration response");
+      }
+      setSettingsConfig(configuration);
+    } catch (error) {
+      console.error(t("setting.fetchError"), error);
+      setSettingsConfigError(
+        error instanceof Error ? error.message : String(error)
+      );
+    }
   }, [publicSettings?.theme, t]);
+
+  useEffect(() => {
+    fetchSettingsConfig();
+  }, [fetchSettingsConfig]);
 
   useEffect(() => {
     setEditingConfig(publicSettings?.theme_settings || {});
@@ -151,6 +168,85 @@ const SettingsPanel = ({ isOpen, onClose }: SettingsPanelProps) => {
     downloadAnchorNode.remove();
   };
 
+  /**
+   * 按配置清单对导入的配置做取值校验（原来只按 key 过滤，不校验取值）：
+   * - select：值必须在清单 options 内，否则丢弃该项
+   * - switch：归一化为布尔（兼容 true/false/1/0/"true"/"false"/"on"/"off" 等）
+   * - number：必须是有限数值，否则丢弃该项
+   * - string：必须是字符串，否则丢弃该项
+   */
+  const sanitizeImportedConfig = useCallback(
+    (imported: unknown): Partial<ConfigOptions> => {
+      const sanitized: Record<string, unknown> = {};
+      if (!imported || typeof imported !== "object" || Array.isArray(imported)) {
+        return sanitized as Partial<ConfigOptions>;
+      }
+
+      const source = imported as Record<string, unknown>;
+      const itemsByKey = new Map<string, any>();
+      for (const item of settingsConfig) {
+        if (item?.key) {
+          itemsByKey.set(item.key as string, item);
+        }
+      }
+
+      for (const key in DEFAULT_CONFIG) {
+        if (!Object.prototype.hasOwnProperty.call(source, key)) {
+          continue;
+        }
+
+        const rawValue = source[key];
+        const item = itemsByKey.get(key);
+        const expectedType =
+          item?.type ?? typeof DEFAULT_CONFIG[key as keyof ConfigOptions];
+
+        switch (expectedType) {
+          case "select": {
+            const options = String(item?.options ?? "")
+              .split(",")
+              .map((option) => option.trim())
+              .filter(Boolean);
+            const candidate =
+              typeof rawValue === "string" ? rawValue : String(rawValue);
+            if (options.includes(candidate)) {
+              sanitized[key] = candidate;
+            }
+            break;
+          }
+          case "switch":
+          case "boolean": {
+            sanitized[key] = parseBoolean(
+              rawValue,
+              Boolean(DEFAULT_CONFIG[key as keyof ConfigOptions])
+            );
+            break;
+          }
+          case "number": {
+            const isNumericInput =
+              typeof rawValue === "number" ||
+              (typeof rawValue === "string" && rawValue.trim() !== "");
+            const numeric = Number(rawValue);
+            if (isNumericInput && Number.isFinite(numeric)) {
+              sanitized[key] = numeric;
+            }
+            break;
+          }
+          case "string": {
+            if (typeof rawValue === "string") {
+              sanitized[key] = rawValue;
+            }
+            break;
+          }
+          default:
+            break;
+        }
+      }
+
+      return sanitized as Partial<ConfigOptions>;
+    },
+    [settingsConfig]
+  );
+
   const handleImport = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -158,12 +254,7 @@ const SettingsPanel = ({ isOpen, onClose }: SettingsPanelProps) => {
       reader.onload = (e) => {
         try {
           const importedConfig = JSON.parse(e.target?.result as string);
-          const sanitizedConfig: Partial<ConfigOptions> = {};
-          for (const key in DEFAULT_CONFIG) {
-            if (Object.prototype.hasOwnProperty.call(importedConfig, key)) {
-              (sanitizedConfig as any)[key] = (importedConfig as any)[key];
-            }
-          }
+          const sanitizedConfig = sanitizeImportedConfig(importedConfig);
           setEditingConfig(sanitizedConfig);
           toast.success(t("setting.importSuccess"), {
             action: {
@@ -291,6 +382,17 @@ const SettingsPanel = ({ isOpen, onClose }: SettingsPanelProps) => {
             )}
         </div>
       </div>
+      {settingsConfigError && (
+        <div className="mb-4 theme-card-style rounded-lg border border-red-500/50 p-3 text-sm">
+          <p className="font-semibold">{t("setting.fetchErrorTitle")}</p>
+          <p className="mt-1 text-xs break-all opacity-80">
+            {settingsConfigError}
+          </p>
+          <Button className="mt-2" size="sm" onClick={fetchSettingsConfig}>
+            {t("search.retry")}
+          </Button>
+        </div>
+      )}
       <div className="space-y-4">
         {currentPage === "main" ? (
           settingsConfig

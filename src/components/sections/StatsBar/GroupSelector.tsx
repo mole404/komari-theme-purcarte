@@ -12,6 +12,7 @@ import { Layers } from "lucide-react";
 import { cn } from "@/utils";
 import type { StatsBarProps } from "./types";
 import { useLocale } from "@/config/hooks";
+import { ALL_GROUPS } from "@/hooks/useNodeCommons";
 
 export const GroupSelector = memo(
   ({
@@ -30,7 +31,7 @@ export const GroupSelector = memo(
             size="sm"
             className="h-7 shrink-0 rounded-full px-2 text-xs font-semibold">
             <Layers className="mr-1.5 h-3.5 w-3.5" />
-            {selectedGroup}
+            {selectedGroup === ALL_GROUPS ? t("group.all") : selectedGroup}
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="center">
@@ -44,7 +45,7 @@ export const GroupSelector = memo(
                 selectedGroup === group && "bg-secondary/30 font-semibold"
               )}
               onSelect={() => onSelectGroup(group)}>
-              {group}
+              {group === ALL_GROUPS ? t("group.all") : group}
             </DropdownMenuItem>
           ))}
         </DropdownMenuContent>
