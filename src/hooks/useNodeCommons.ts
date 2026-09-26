@@ -7,6 +7,7 @@ import { useLiveData } from "@/contexts/LiveDataContext";
 import type { NodeDataContextType } from "@/contexts/NodeDataContext";
 import type { LiveDataContextType } from "@/contexts/LiveDataContext";
 import { useLocale, useAppConfig } from "@/config/hooks";
+import { defaultTexts } from "@/config/locales";
 
 type SortKey = "trafficUp" | "trafficDown" | "speedUp" | "speedDown" | null;
 type SortOrder = "asc" | "desc";
@@ -34,9 +35,24 @@ export const useNodeListCommons = (searchTerm: string) => {
     getGroups,
   } = useNodeData() as NodeDataContextType;
   const { liveData } = useLiveData() as LiveDataContextType;
+  const { t } = useLocale();
   const { isOfflineNodesBehind, defaultSelectedGroup } = useAppConfig();
-  const [selectedGroup, setSelectedGroup] = useState(
-    defaultSelectedGroup || ALL_GROUPS
+
+  /**
+   * 兼容历史配置：改用哨兵常量之前，"全部分组"就是用显示文案本身当哨兵的（旧代码
+   * 直接拿 t("group.all") 比较）。后台「默认选择展示分组」里若填的是这句文案
+   * （例如清单默认提示里的"所有"），原样透传会让过滤条件一个都不命中、节点全空。
+   * 这里把「随包默认文案」和「当前实际文案（可能被 customTexts 改过）」都当作哨兵。
+   */
+  const allGroupsLabels = useMemo(
+    () => new Set<string>([defaultTexts.group.all, t("group.all")].filter(Boolean)),
+    [t]
+  );
+
+  const [selectedGroup, setSelectedGroup] = useState(() =>
+    !defaultSelectedGroup || allGroupsLabels.has(defaultSelectedGroup)
+      ? ALL_GROUPS
+      : defaultSelectedGroup
   );
   const [sortKey, setSortKey] = useState<SortKey>(null);
   const [sortOrder, setSortOrder] = useState<SortOrder>("desc");
@@ -70,7 +86,9 @@ export const useNodeListCommons = (searchTerm: string) => {
     let nodes = combinedNodes
       .filter(
         (node: NodeData & { stats?: any }) =>
-          selectedGroup === ALL_GROUPS || node.group === selectedGroup
+          selectedGroup === ALL_GROUPS ||
+          allGroupsLabels.has(selectedGroup) ||
+          node.group === selectedGroup
       )
       .filter((node: NodeData) =>
         node.name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -113,6 +131,7 @@ export const useNodeListCommons = (searchTerm: string) => {
   }, [
     combinedNodes,
     selectedGroup,
+    allGroupsLabels,
     searchTerm,
     sortKey,
     sortOrder,
