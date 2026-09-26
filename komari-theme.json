@@ -67,7 +67,7 @@
                 "help": "移动端视频背景链接，与桌面端一样区分亮暗模式，留空则使用桌面端视频"
             },
             {
-                "key": "backagroundAlignment",
+                "key": "backgroundAlignment",
                 "name": "背景对齐方式",
                 "type": "string",
                 "default": "cover,top",
