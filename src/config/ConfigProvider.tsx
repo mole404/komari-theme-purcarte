@@ -119,8 +119,14 @@ export function ConfigProvider({ children }: ConfigProviderProps) {
     <ConfigContext.Provider
       value={{
         ...activeConfig,
-        // 优先使用 activeConfig（含预览配置），否则预览标题会被 config 覆盖掉
-        titleText: activeConfig.titleText || DEFAULT_CONFIG.titleText,
+        // 优先使用 activeConfig（含预览配置），否则预览标题会被 config 覆盖掉。
+        // 但预览对象里的 titleText 经常是空串（清单默认值就是 ""，设置面板一挂载就会把
+        // theme_settings 灌进 previewConfig），所以空值必须继续往下落到 config.titleText
+        // —— 那才是「主题设置 → 站点标题 → 默认值」解析后的结果（见上方 loadConfig）。
+        titleText:
+          activeConfig.titleText ||
+          config?.titleText ||
+          DEFAULT_CONFIG.titleText,
         publicSettings,
         siteStatus,
         texts,
