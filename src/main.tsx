@@ -246,15 +246,16 @@ export const AppContent = () => {
   }, []);
 
   useEffect(() => {
+    const clampedMainWidth = Math.min(100, Math.max(1, Number(mainWidth) || 85));
     if (isSettingsOpen && !isMobile) {
       document.documentElement.style.setProperty(
         "--main-width",
-        `calc(${mainWidth}vw - var(--setting-width))`
+        `calc(${clampedMainWidth}vw - var(--setting-width))`
       );
     } else {
       document.documentElement.style.setProperty(
         "--main-width",
-        `${mainWidth}vw`
+        `${clampedMainWidth}vw`
       );
     }
   }, [isSettingsOpen, isMobile, mainWidth]);

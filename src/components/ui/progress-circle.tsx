@@ -27,7 +27,7 @@ export const CircleProgress: React.FC<CircleProgressProps> = ({
   const getColor = () => {
     if (color) return color;
     if (percentage > 90) return "stroke-red-600";
-    if (percentage > 50) return "stroke-yellow-400";
+    if (percentage > 60) return "stroke-yellow-400";
     return "stroke-green-500";
   };
 

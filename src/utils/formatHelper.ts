@@ -108,6 +108,6 @@ export const formatTrafficLimit = (
 
 export const getProgressBarClass = (percentage: number) => {
   if (percentage > 90) return "bg-red-600";
-  if (percentage > 50) return "bg-yellow-400";
+  if (percentage > 60) return "bg-yellow-400";
   return "bg-green-500";
 };

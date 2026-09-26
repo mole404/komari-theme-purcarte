@@ -9,6 +9,7 @@ export interface ConfigOptions {
   videoBackgroundUrlMobile: string; // 移动端视频背景URL
   backgroundAlignment: string; // 背景对齐方式
   blurValue: number; // 磨砂玻璃模糊值
+  enableBlur: boolean; // 是否启用磨砂玻璃效果
   blurBackgroundColor: string; // 磨砂玻璃背景颜色
   enableTransparentTags: boolean; // 是否启用标签透明背景
   tagDefaultColorList: string; // 标签默认颜色列表
@@ -58,6 +59,7 @@ export const DEFAULT_CONFIG: ConfigOptions = {
   videoBackgroundUrlMobile: "",
   backgroundAlignment: "cover,top",
   blurValue: 10,
+  enableBlur: true,
   blurBackgroundColor: "rgba(255, 255, 255, 0.5)|rgba(0, 0, 0, 0.5)",
   enableTransparentTags: true,
   tagDefaultColorList:
@@ -93,7 +95,7 @@ export const DEFAULT_CONFIG: ConfigOptions = {
   pingChartMaxPoints: 0,
   isShowHWBarInCard: true,
   isShowValueUnderProgressBar: false,
-  selectTrafficProgressStyle: "linear",
+  selectTrafficProgressStyle: "circular",
   enableListItemProgressBar: true,
   customTexts: "",
 };

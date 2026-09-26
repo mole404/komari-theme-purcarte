@@ -38,21 +38,42 @@ export function DynamicContent({ children }: { children: ReactNode }) {
 
   const dynamicStyles = useMemo(() => {
     if (!config) return "";
-    const { mainWidth, blurValue, blurBackgroundColor } = config;
+    const { mainWidth, blurValue, blurBackgroundColor, enableBlur } = config;
+    const blurPx =
+      Number.isFinite(Number(blurValue)) && Number(blurValue) >= 0
+        ? Number(blurValue)
+        : 10;
+    const width = Math.min(100, Math.max(1, Number(mainWidth) || 85));
+    const isBlurOff =
+      (enableBlur as unknown) === false ||
+      (enableBlur as unknown) === 0 ||
+      (typeof enableBlur === "string" &&
+        [
+          "false",
+          "0",
+          "off",
+          "no",
+          "none",
+          "disable",
+          "disabled",
+          "关闭",
+          "否",
+          "不",
+          "假",
+        ].indexOf((enableBlur as string).trim().toLowerCase()) >= 0);
     const styles: string[] = [];
 
-    styles.push(`--main-width: ${mainWidth}vw;`);
+    styles.push(`--main-width: ${width}vw;`);
     styles.push(`--body-background-url: url(${imageUrl});`);
-    styles.push(`--purcarte-blur: ${blurValue}px;`);
+    styles.push(`--purcarte-blur: ${isBlurOff ? 0 : blurPx}px;`);
 
     const colors = blurBackgroundColor.split("|").map((color) => color.trim());
-    if (colors.length >= 2) {
-      styles.push(`--card-light: ${colors[0]};`);
-      styles.push(`--card-dark: ${colors[1]};`);
-    } else if (colors.length === 1) {
-      styles.push(`--card-light: ${colors[0]};`);
-      styles.push(`--card-dark: ${colors[0]};`);
-    }
+    const lightDefault = "rgba(255, 255, 255, 0.5)";
+    const darkDefault = "rgba(0, 0, 0, 0.5)";
+    styles.push(`--card-light: ${colors[0] || lightDefault};`);
+    styles.push(
+      `--card-dark: ${(colors.length >= 2 ? colors[1] : colors[0]) || darkDefault};`
+    );
 
     return `:root { ${styles.join(" ")} }`;
   }, [config, imageUrl]);

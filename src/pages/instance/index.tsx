@@ -11,7 +11,6 @@ const PingChart = lazy(() => import("./PingChart"));
 import Loading from "@/components/loading";
 import Flag from "@/components/sections/Flag";
 import { useAppConfig } from "@/config";
-import { useIsMobile } from "@/hooks/useMobile";
 import { useLocale } from "@/config/hooks";
 import { Card } from "@/components/ui/card";
 
@@ -34,7 +33,6 @@ const InstancePage = () => {
   const [pingHours, setPingHours] = useState<number>(1); // 默认1小时
   const { enableInstanceDetail, enablePingChart, publicSettings } =
     useAppConfig();
-  const isMobile = useIsMobile();
   const { t } = useLocale();
 
   const maxRecordPreserveTime = publicSettings?.record_preserve_time || 0; // 默认0表示关闭
@@ -47,6 +45,7 @@ const InstancePage = () => {
       { label: t("instancePage.hours", { count: 1 }), hours: 1 },
       { label: t("instancePage.hours", { count: 4 }), hours: 4 },
       { label: t("instancePage.days", { count: 1 }), hours: 24 },
+      { label: t("instancePage.days", { count: 3 }), hours: 72 },
       { label: t("instancePage.days", { count: 7 }), hours: 168 },
       { label: t("instancePage.days", { count: 30 }), hours: 720 },
     ];
@@ -57,7 +56,7 @@ const InstancePage = () => {
       (range) => range.hours !== 0 && range.hours <= maxPingRecordPreserveTime
     );
 
-    if (maxPingRecordPreserveTime > 720) {
+    if (!timeRanges.some((range) => range.hours === maxPingRecordPreserveTime)) {
       const dynamicLabel =
         maxPingRecordPreserveTime % 24 === 0
           ? t("instancePage.days", {
@@ -77,7 +76,7 @@ const InstancePage = () => {
     const filtered = timeRanges.filter(
       (range) => range.hours <= maxRecordPreserveTime
     );
-    if (maxRecordPreserveTime > 720) {
+    if (!timeRanges.some((range) => range.hours === maxRecordPreserveTime)) {
       const dynamicLabel =
         maxRecordPreserveTime % 24 === 0
           ? t("instancePage.days", {
@@ -221,9 +220,9 @@ const InstancePage = () => {
             )}
           </div>
         </Card>
-        <Card className={`justify-center p-2 ${isMobile ? "w-full" : ""}`}>
+        <Card className="justify-center p-2">
           {chartType === "load" ? (
-            <div className="flex space-x-2 overflow-x-auto whitespace-nowrap">
+            <div className="flex flex-wrap justify-center gap-1">
               {loadTimeRanges.map((range) => (
                 <Button
                   key={range.label}
@@ -235,7 +234,7 @@ const InstancePage = () => {
               ))}
             </div>
           ) : (
-            <div className="flex space-x-2 overflow-x-auto whitespace-nowrap">
+            <div className="flex flex-wrap justify-center gap-1">
               {pingTimeRanges.map((range) => (
                 <Button
                   key={range.label}
