@@ -82,6 +82,7 @@
   --setting-width: 24rem;
   --purcarte-blur: 10px;
   --body-background-url: url("");
+  --body-mask: rgba(0, 0, 0, 0);
 }
 
 .dark {
@@ -171,6 +172,16 @@
   .theme-text-muted {
     @apply text-(--theme-text-muted-color);
   }
+}
+
+/* 背景遮罩：叠在背景图片(z-10)与视频背景(z-20)之上 */
+#background-container::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 30;
+  pointer-events: none;
+  background-color: var(--body-mask);
 }
 
 .striped-bg-red-translucent-diagonal {

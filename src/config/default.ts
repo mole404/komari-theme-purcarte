@@ -3,7 +3,9 @@ export interface ConfigOptions {
   isShowConfigEditButtonInLogined: boolean; // 是否在登录时显示配置编辑按钮
   mainWidth: number; // 主内容宽度百分比
   backgroundImage: string; // 桌面端背景图片URL
+  backgroundMaskDesktop: number; // 桌面端背景遮罩（0-100）
   backgroundImageMobile: string; // 移动端背景图片URL
+  backgroundMaskMobile: number; // 移动端背景遮罩（0-100）
   enableVideoBackground: boolean; // 是否启用视频背景
   videoBackgroundUrl: string; // 桌面端视频背景URL
   videoBackgroundUrlMobile: string; // 移动端视频背景URL
@@ -53,7 +55,9 @@ export const DEFAULT_CONFIG: ConfigOptions = {
   isShowConfigEditButtonInLogined: true,
   mainWidth: 85,
   backgroundImage: "/assets/Moonlit-Scenery.webp",
+  backgroundMaskDesktop: 0,
   backgroundImageMobile: "",
+  backgroundMaskMobile: 0,
   enableVideoBackground: false,
   videoBackgroundUrl: "/assets/LanternRivers_1080p15fps2Mbps3s.mp4",
   videoBackgroundUrlMobile: "",

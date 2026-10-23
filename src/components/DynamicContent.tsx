@@ -39,7 +39,14 @@ export function DynamicContent({ children }: { children: ReactNode }) {
 
   const dynamicStyles = useMemo(() => {
     if (!config) return "";
-    const { mainWidth, blurValue, blurBackgroundColor, enableBlur } = config;
+    const {
+      mainWidth,
+      blurValue,
+      blurBackgroundColor,
+      enableBlur,
+      backgroundMaskDesktop,
+      backgroundMaskMobile,
+    } = config;
     const blurPx =
       Number.isFinite(Number(blurValue)) && Number(blurValue) >= 0
         ? Number(blurValue)
@@ -52,6 +59,11 @@ export function DynamicContent({ children }: { children: ReactNode }) {
     styles.push(`--body-background-url: url(${imageUrl});`);
     styles.push(`--purcarte-blur: ${isBlurOff ? 0 : blurPx}px;`);
 
+    // 背景遮罩：0-100 的整数，越靠近 100 背景越暗，同时覆盖图片与视频背景
+    const maskRaw = isMobile ? backgroundMaskMobile : backgroundMaskDesktop;
+    const mask = Math.min(100, Math.max(0, Number(maskRaw) || 0));
+    styles.push(`--body-mask: rgba(0, 0, 0, ${mask / 100});`);
+
     const colors = blurBackgroundColor.split("|").map((color) => color.trim());
     const lightDefault = "rgba(255, 255, 255, 0.5)";
     const darkDefault = "rgba(0, 0, 0, 0.5)";
@@ -61,7 +73,7 @@ export function DynamicContent({ children }: { children: ReactNode }) {
     );
 
     return `:root { ${styles.join(" ")} }`;
-  }, [config, imageUrl]);
+  }, [config, imageUrl, isMobile]);
 
   useEffect(() => {
     const imageBackground = document.getElementById("image-background");
