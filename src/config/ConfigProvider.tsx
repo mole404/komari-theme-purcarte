@@ -3,7 +3,7 @@ import type { PublicInfo } from "@/types/node.d";
 import { ConfigContext } from "./ConfigContext";
 import { DEFAULT_CONFIG, type ConfigOptions, type SiteStatus } from "./default";
 import { apiService, getWsService } from "@/services/api";
-import Loading from "@/components/loading";
+import BootScreen from "@/components/BootScreen";
 import { defaultTexts, otherTexts } from "./locales";
 import { mergeTexts, deepMerge } from "@/utils/localeUtils";
 
@@ -21,7 +21,7 @@ export function ConfigProvider({ children }: ConfigProviderProps) {
   const [siteStatus, setSiteStatus] = useState<SiteStatus>("public");
   const [previewConfig, setPreviewConfig] =
     useState<Partial<ConfigOptions> | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [, setLoading] = useState(true);
   const [isLoaded, setIsLoaded] = useState(false);
 
   const loadConfig = async () => {
@@ -111,7 +111,7 @@ export function ConfigProvider({ children }: ConfigProviderProps) {
 
   if (!isLoaded || !config) {
     return (
-      <Loading text="加载配置中..." className={!loading ? "fade-out" : ""} />
+      <BootScreen />
     );
   }
 

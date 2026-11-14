@@ -11,6 +11,22 @@ import {
 import type { ConfigOptions } from "@/config/default";
 import { parseBoolean } from "@/utils/parseBoolean";
 
+const OPTION_LABELS: Record<string, string> = {
+  cover: "填满裁切",
+  contain: "完整显示",
+  fill: "拉伸铺满",
+  inherit: "跟随桌面端",
+  center: "居中",
+  top: "顶部",
+  bottom: "底部",
+  left: "左侧",
+  right: "右侧",
+  "top left": "左上",
+  "top right": "右上",
+  "bottom left": "左下",
+  "bottom right": "右下",
+};
+
 interface SettingItemProps {
   item: any;
   editingConfig: Partial<ConfigOptions>;
@@ -80,26 +96,37 @@ const SettingItem = ({
             }}
           />
         );
-      case "select":
+      case "select": {
+        const options = String(item.options ?? "")
+          .split(",")
+          .map((option: string) => option.trim())
+          .filter(Boolean);
+        // 历史脏值不在清单里时 Radix 的触发器会显示空白，回落成该项默认值，
+        // 至少让当前生效的取值看得见
+        const fallback = options.includes(String(defaultValue))
+          ? String(defaultValue)
+          : options[0] ?? "";
+        const raw = String(localValue ?? "");
         return (
           <Select
-            value={localValue as string}
+            value={options.includes(raw) ? raw : fallback}
             onValueChange={(value) => {
               setLocalValue(value);
               onConfigChange(item.key, value);
             }}>
-            <SelectTrigger>
+            <SelectTrigger className="w-auto min-w-28 whitespace-nowrap">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              {item.options.split(",").map((option: string) => (
+              {options.map((option: string) => (
                 <SelectItem key={option} value={option}>
-                  {option}
+                  {OPTION_LABELS[option] ?? option}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         );
+      }
       default:
         return null;
     }
@@ -121,7 +148,7 @@ const SettingItem = ({
             <p className="text-sm text-gray-500 mt-1">{item.help}</p>
           )}
         </div>
-        <div className="mt-2">{renderInput()}</div>
+        <div className="mt-2 ml-3 shrink-0">{renderInput()}</div>
       </div>
     );
   }

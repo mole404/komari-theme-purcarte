@@ -4,6 +4,32 @@ import { useIsMobile } from "@/hooks/useMobile";
 import { useTheme } from "@/hooks/useTheme";
 import { parseBoolean } from "@/utils/parseBoolean";
 
+const BACKGROUND_SIZES = ["cover", "contain", "fill"] as const;
+const BACKGROUND_POSITIONS = [
+  "center",
+  "top",
+  "bottom",
+  "left",
+  "right",
+  "top left",
+  "top right",
+  "bottom left",
+  "bottom right",
+] as const;
+const MOBILE_BACKGROUND_SIZES = ["inherit", ...BACKGROUND_SIZES] as const;
+const MOBILE_BACKGROUND_POSITIONS = ["inherit", ...BACKGROUND_POSITIONS] as const;
+const DEFAULT_ALIGNMENT_SIZE = "cover";
+const DEFAULT_ALIGNMENT_POSITION = "center";
+
+const pickOption = (
+  value: unknown,
+  allowed: readonly string[],
+  fallback: string
+) => {
+  const raw = typeof value === "string" ? value.trim() : "";
+  return allowed.includes(raw) ? raw : fallback;
+};
+
 export function DynamicContent({ children }: { children: ReactNode }) {
   const config = useAppConfig();
   const isMobile = useIsMobile();
@@ -80,13 +106,40 @@ export function DynamicContent({ children }: { children: ReactNode }) {
     const videoBackground = document.getElementById(
       "video-background"
     ) as HTMLVideoElement;
-    const [size, position] = config.backgroundAlignment
-      .split(",")
-      .map((s) => s.trim());
+
+    const desktopSize = pickOption(
+      config.backgroundSizeDesktop,
+      BACKGROUND_SIZES,
+      DEFAULT_ALIGNMENT_SIZE
+    );
+    const desktopPosition = pickOption(
+      config.backgroundPositionDesktop,
+      BACKGROUND_POSITIONS,
+      DEFAULT_ALIGNMENT_POSITION
+    );
+    const mobileSize = pickOption(
+      config.backgroundSizeMobile,
+      MOBILE_BACKGROUND_SIZES,
+      "inherit"
+    );
+    const mobilePosition = pickOption(
+      config.backgroundPositionMobile,
+      MOBILE_BACKGROUND_POSITIONS,
+      "inherit"
+    );
+
+    // 移动端选了“跟随桌面端”就落回桌面值；其余情况两端各自独立
+    const size = isMobile && mobileSize !== "inherit" ? mobileSize : desktopSize;
+    const position =
+      isMobile && mobilePosition !== "inherit" ? mobilePosition : desktopPosition;
+
+    // background-size 不接受 fill（整条声明会被丢弃），图片侧换成等价写法；
+    // object-fit 的三种取值都合法，视频侧直接使用
+    const imageSize = size === "fill" ? "100% 100%" : size;
 
     if (imageBackground) {
       imageBackground.style.backgroundImage = `url(${imageUrl})`;
-      imageBackground.style.backgroundSize = size;
+      imageBackground.style.backgroundSize = imageSize;
       imageBackground.style.backgroundPosition = position;
     }
 
@@ -103,7 +156,11 @@ export function DynamicContent({ children }: { children: ReactNode }) {
   }, [
     imageUrl,
     videoUrl,
-    config.backgroundAlignment,
+    isMobile,
+    config.backgroundSizeDesktop,
+    config.backgroundPositionDesktop,
+    config.backgroundSizeMobile,
+    config.backgroundPositionMobile,
     config.enableVideoBackground,
   ]);
 

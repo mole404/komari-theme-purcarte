@@ -93,6 +93,16 @@
   - **默认值:** `0`
   - **说明:** 0-100 的整数，数值越大背景越暗（0 为不遮罩），同时作用于背景图片和视频背景
 
+- **桌面端背景填充方式** (`backgroundSizeDesktop`)
+  - **类型:** `select`
+  - **默认值:** `cover`
+  - **说明:** 背景图片与视频背景铺满屏幕的方式，可选 cover（填满裁切）、contain（完整显示）、fill（拉伸变形）
+
+- **桌面端背景对齐位置** (`backgroundPositionDesktop`)
+  - **类型:** `select`
+  - **默认值:** `center`
+  - **说明:** 背景图片与视频背景在容器内的对齐位置，可选 center（居中）、top（顶部）、bottom（底部）、left（左侧）、right（右侧）、top left（左上）、top right（右上）、bottom left（左下）、bottom right（右下）
+
 - **移动端背景图片链接** (`backgroundImageMobile`)
   - **类型:** `string`
   - **默认值:** `(空)`
@@ -102,6 +112,16 @@
   - **类型:** `number`
   - **默认值:** `0`
   - **说明:** 0-100 的整数，数值越大背景越暗（0 为不遮罩），同时作用于背景图片和视频背景，与桌面端各自独立生效
+
+- **移动端背景填充方式** (`backgroundSizeMobile`)
+  - **类型:** `select`
+  - **默认值:** `inherit`
+  - **说明:** 移动端独立的填充方式，可选 inherit（跟随桌面端）、cover（填满裁切）、contain（完整显示）、fill（拉伸变形）
+
+- **移动端背景对齐位置** (`backgroundPositionMobile`)
+  - **类型:** `select`
+  - **默认值:** `inherit`
+  - **说明:** 移动端独立的对齐位置，可选 inherit（跟随桌面端）、center（居中）、top（顶部）、bottom（底部）、left（左侧）、right（右侧）、top left（左上）、top right（右上）、bottom left（左下）、bottom right（右下）
 
 - **启用视频背景** (`enableVideoBackground`)
   - **类型:** `switch`
@@ -117,11 +137,6 @@
   - **类型:** `string`
   - **默认值:** `(空)`
   - **说明:** 移动端视频背景链接，与桌面端一样区分亮暗模式，留空则使用桌面端视频
-
-- **背景对齐方式** (`backgroundAlignment`)
-  - **类型:** `string`
-  - **默认值:** `cover,top`
-  - **说明:** 调整背景图片和视频的对齐方式，使用“,”分隔背景大小和位置两个属性，背景大小可选 cover（覆盖）,contain（包含）,fill（填充）；背景位置可选 center（居中）,top（顶部）,bottom（底部）,left（左侧）,right（右侧），eg: cover,top
 
 - **启用磨砂玻璃效果** (`enableBlur`)
   - **类型:** `switch`
