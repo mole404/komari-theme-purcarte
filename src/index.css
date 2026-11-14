@@ -125,7 +125,7 @@
     @apply border-(--accent-4)/50 outline-ring/50;
   }
   body {
-    @apply bg-background;
+    background-color: var(--body-bg, var(--background));
   }
   button {
     cursor: pointer;

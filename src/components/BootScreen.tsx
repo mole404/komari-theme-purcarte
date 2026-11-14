@@ -36,6 +36,7 @@ export default function BootScreen({
 
   useEffect(() => {
     document.getElementById("boot-shell")?.remove();
+    delete document.documentElement.dataset.bootTheme;
   }, []);
 
   return (

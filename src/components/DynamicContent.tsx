@@ -82,6 +82,8 @@ export function DynamicContent({ children }: { children: ReactNode }) {
     const styles: string[] = [];
 
     styles.push(`--main-width: ${width}vw;`);
+    // 没有背景图时的兜底底色：跟随当前外观，避免暗色下露出一整片亮色画布
+    styles.push(`--body-bg: ${appearance === "dark" ? "#0a0a0a" : "#fafafa"};`);
     styles.push(`--body-background-url: url(${imageUrl});`);
     styles.push(`--purcarte-blur: ${isBlurOff ? 0 : blurPx}px;`);
 
@@ -99,7 +101,12 @@ export function DynamicContent({ children }: { children: ReactNode }) {
     );
 
     return `:root { ${styles.join(" ")} }`;
-  }, [config, imageUrl, isMobile]);
+  }, [config, imageUrl, isMobile, appearance]);
+
+  // 让 UA 层的滚动条等元素也跟随实际外观（首屏壳留下的 data-boot-theme 只在加载期有用）
+  useEffect(() => {
+    document.documentElement.style.colorScheme = appearance;
+  }, [appearance]);
 
   useEffect(() => {
     const imageBackground = document.getElementById("image-background");

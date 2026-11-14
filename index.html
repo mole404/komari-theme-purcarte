@@ -22,13 +22,13 @@
     <meta name="description" content="A simple server monitor tool." />
     <style>
       /* 首屏壳：JS/CSS 到达前先画一版加载页，避免白屏和暗色闪白 */
-      html {
+      /* 首屏壳存在期间才给画布上色（:has 随壳移除自动失效），
+         这样加载期不白屏、加载完又不挡住负 z-index 的背景图层 */
+      html:has(#boot-shell) {
         background: #f1eef9;
-        color-scheme: light;
       }
-      html[data-boot-theme="dark"] {
+      html[data-boot-theme="dark"]:has(#boot-shell) {
         background: #08080c;
-        color-scheme: dark;
       }
       #boot-shell {
         position: fixed;
