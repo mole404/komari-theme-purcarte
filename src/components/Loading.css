@@ -26,7 +26,7 @@
   -webkit-animation: dash 1.5s ease-in-out infinite;
   animation: dash 1.5s ease-in-out infinite;
   stroke-linecap: round;
-  stroke: var(--accent-9, #3b82f6);
+  stroke: var(--accent-11, #3b82f6);
 }
 
 @-webkit-keyframes rotate {
