@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { StatsBar } from "@/components/sections/StatsBar";
 import { NodeGridContainer } from "@/components/sections/NodeGrid";
@@ -19,6 +20,26 @@ import { useIsMobile } from "@/hooks/useMobile";
 import { useLocale } from "@/config/hooks";
 import { ALL_GROUPS } from "@/hooks/useNodeCommons";
 import { cn } from "@/utils";
+
+const NodeGridSkeleton = () => (
+  <div className="my-4 grid grid-cols-[repeat(auto-fill,minmax(18rem,1fr))] gap-4">
+    {Array.from({ length: 6 }).map((_, index) => (
+      <div
+        key={index}
+        className="theme-card-style animate-pulse rounded-lg bg-(--card) p-4 backdrop-blur-md">
+        <div className="mb-4 flex items-center justify-between">
+          <div className="h-4 w-28 rounded bg-(--foreground)/20" />
+          <div className="h-4 w-4 rounded bg-(--foreground)/20" />
+        </div>
+        <div className="space-y-3">
+          <div className="h-3 w-3/4 rounded bg-(--foreground)/15" />
+          <div className="h-3 w-1/2 rounded bg-(--foreground)/15" />
+          <div className="mt-2 h-16 w-full rounded bg-(--foreground)/10" />
+        </div>
+      </div>
+    ))}
+  </div>
+);
 
 interface HomePageProps {
   searchTerm: string;
@@ -58,9 +79,28 @@ const HomePage: React.FC<HomePageProps> = ({
   const isMobile = useIsMobile();
 
   const hasSearchTerm = searchTerm.trim().length > 0;
+  // 数据到达前会有一小段 loading：延迟 300ms 再露脸，绝大多数情况下数据已经到了，
+  // 避免刚进首页就闪一下转圈
+  const [showLoading, setShowLoading] = useState(false);
+  useEffect(() => {
+    if (!loading) {
+      setShowLoading(false);
+      return;
+    }
+    const timer = setTimeout(() => setShowLoading(true), 300);
+    return () => clearTimeout(timer);
+  }, [loading]);
 
   if (loading) {
-    return <Loading text={t("homePage.loadingData")} />;
+    // 网格视图用骨架卡片占位，避免刚进首页时再闪一次转圈；其他视图保留转圈但延迟出现
+    if (viewMode === "grid") {
+      return <NodeGridSkeleton />;
+    }
+    return showLoading ? (
+      <div className="flex min-h-[70vh] w-full items-center justify-center">
+        <Loading text={t("homePage.loadingData")} />
+      </div>
+    ) : null;
   }
 
   const renderContent = () => {

@@ -155,13 +155,13 @@ const InstancePage = () => {
   if (!node || !staticNode) {
     if (nodesLoading) {
       return (
-        <div className="flex items-center justify-center h-full">
+        <div className="flex min-h-[60vh] items-center justify-center h-full">
           <Loading text={t("instancePage.loadingNodeInfo")} />
         </div>
       );
     }
     return (
-      <div className="flex items-center justify-center h-full">
+      <div className="flex min-h-[60vh] items-center justify-center h-full">
         {t("instancePage.nodeNotFound")}
       </div>
     );
@@ -169,7 +169,7 @@ const InstancePage = () => {
 
   if (!isReady) {
     return (
-      <div className="flex items-center justify-center h-full">
+      <div className="flex min-h-[60vh] items-center justify-center h-full">
         <Loading
           text={t("instancePage.enteringNodeDetails")}
           className={!nodesLoading ? "fade-out" : ""}
